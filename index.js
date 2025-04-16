@@ -20,43 +20,41 @@ client.once('ready', () => {
 client.on('messageCreate', async message => {
   console.log(`[DEBUG] メッセージ受信: ${message.content}`);
 
- if (message.attachments.size > 0) {
+if (message.attachments.size > 0 && !message.content.startsWith('/テラ')) {
   const attachment = message.attachments.first();
   const imageUrl = attachment.url;
 
   try {
-const response = await axios.get(imageUrl, {
-responseType: 'arraybuffer',
-});
-const base64Image = Buffer.from(response.data).toString('base64');
-const mimeType = attachment.contentType || 'image/png';
+    const response = await axios.get(imageUrl, {
+      responseType: 'arraybuffer',
+    });
+    const base64Image = Buffer.from(response.data).toString('base64');
+    const mimeType = attachment.contentType || 'image/png';
 
-const chatCompletion = await openai.chat.completions.create({
-  model: 'gpt-4-turbo', 
-  messages: [
-    {
-      role: 'user',
-      content: [
-        { type: 'text', text: 'この画像に写っているものを説明して' },
+    const chatCompletion = await openai.chat.completions.create({
+      model: 'gpt-4-turbo',
+      messages: [
         {
-          type: 'image_url',
-          image_url: {
-            url: `data:${mimeType};base64,${base64Image}`
-          }
+          role: 'user',
+          content: [
+            { type: 'text', text: 'この画像に写っているものを説明して' },
+            {
+              type: 'image_url',
+              image_url: {
+                url: `data:${mimeType};base64,${base64Image}`
+              }
+            }
+          ]
         }
-      ]
-    }
-  ],
-  max_tokens: 1000
-});
+      ],
+      max_tokens: 1000
+    });
 
-    message.reply(chatCompletion.choices[0].message.content);
+    return message.reply(chatCompletion.choices[0].message.content); // ← これが重要！！
   } catch (error) {
     console.error('画像読み込みエラー:', error);
-    message.reply('画像の取得に失敗しました！もう一度試してみてください。');
+    return message.reply('画像の取得に失敗しました！もう一度試してみてください。');
   }
-
-  return;
 }
 
   if (message.author.bot || !message.content.startsWith('/テラ')) return;
