@@ -43,18 +43,24 @@ async function handleImageMessage(message) {
   const attachment = message.attachments.first();
   const imageUrl = attachment.url;
 
-    try {
-    const chatCompletion = await openai.chat.completions.create({
-      model: 'gpt-4-vision-preview',
-      messages: [
+  try {
+const response = await axios.get(imageUrl, {
+responseType: 'arraybuffer',
+});
+const base64Image = Buffer.from(response.data).toString('base64');
+const mimeType = attachment.contentType || 'image/png';
+
+const chatCompletion = await openai.chat.completions.create({
+  model: 'gpt-4-turbo', 
+  messages: [
+    {
+      role: 'user',
+      content: [
+        { type: 'text', text: 'この画像に写っているものを説明して' },
         {
-          role: 'user',
-          content: [
-            { type: 'text', text: 'この画像に写っているものを説明して' },
-            {
-              type: 'image_url',
-              image_url: {
-                url: imageUrl // ✅ Discordの画像URLをそのまま渡す
+          type: 'image_url',
+          image_url: {
+            url: data:${mimeType};base64,${base64Image}
                 }
               }
             ]
