@@ -33,27 +33,17 @@ client.on('messageCreate', async message => {
     const imageUrl = attachment.url;
 
     try {
-    // MIMEタイプの推定（null回避）
-    const mimeType = attachment.contentType ||
-      (attachment.name?.endsWith('.jpg') ? 'image/jpeg' :
-       attachment.name?.endsWith('.jpeg') ? 'image/jpeg' :
-       attachment.name?.endsWith('.png') ? 'image/png' :
-       attachment.name?.endsWith('.webp') ? 'image/webp' :
-       'image/png');
-
-    // Discordの画像URLは一時的なので、Base64ではなく、URLそのまま渡してみる（※一部制限あるが回避可能）
-
-      const chatCompletion = await openai.chat.completions.create({
-        model: 'gpt-4-vision-preview', // ←画像認識にはこのモデルが必須！
-        messages: [
-          {
-            role: 'user',
-            content: [
-              { type: 'text', text: 'この画像に写っているものを説明して' },
-              {
-                type: 'image_url',
-                image_url: {
-                  url: `data:${mimeType};base64,${base64Image}`
+    const chatCompletion = await openai.chat.completions.create({
+      model: 'gpt-4-vision-preview',
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: 'この画像に写っているものを説明して' },
+            {
+              type: 'image_url',
+              image_url: {
+                url: imageUrl // ✅ Discordの画像URLをそのまま渡す
                 }
               }
             ]
