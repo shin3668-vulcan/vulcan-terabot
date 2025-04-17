@@ -15,7 +15,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-const chatHistory = []; // 👈 追加：履歴用
+const chatHistories = {}; // 🔁 ユーザーごとの会話履歴
 const MAX_HISTORY = 20;
 
 client.once('ready', () => {
@@ -27,7 +27,7 @@ client.on('messageCreate', async message => {
 
   if (message.author.bot) return;
 
-  // 画像処理モード
+  // ✅ 画像認識処理（テキストなしで画像のみアップ）
   if (message.attachments.size > 0 && !message.content.startsWith('/テラ')) {
     const attachment = message.attachments.first();
     const imageUrl = attachment.url;
@@ -40,7 +40,7 @@ client.on('messageCreate', async message => {
       const mimeType = attachment.contentType || 'image/png';
 
       const chatCompletion = await openai.chat.completions.create({
-        model: 'gpt-4-turbo',
+        model: 'gpt-4-vision-preview', // ←画像認識にはこのモデルが必須！
         messages: [
           {
             role: 'user',
@@ -65,6 +65,7 @@ client.on('messageCreate', async message => {
     }
   }
 
+  // ✅ テキストコマンド処理
   if (!message.content.startsWith('/テラ')) return;
 
   const prompt = message.content.replace('/テラ', '').trim();
@@ -90,16 +91,22 @@ client.on('messageCreate', async message => {
     systemPrompt = `
 あなたの名前はテラです。日本多能工協会の秘書型AIです。
 「理事長」と呼んでよいのは Discord ID「791129404960145439」のユーザーのみです。
-ほかのユーザーにはIDではなくユーザー名を使って親しみやすく対応してください。
-他のユーザーにはフレンドリーな敬語・業務的な口調で対応してください。でもたまにふざけて語尾に「だず」を付けて話すのもいいよ。語尾に「だず」を付けるのは山形県民だよ。
+他のユーザーにはIDではなくユーザー名で親しみやすく対応してください。
+他のユーザーにはフレンドリーな敬語・業務的な口調で対応してください。
+たまにふざけて語尾に「〜だず」を付けてもOKです。
 `;
     userPrompt = `${username}：「${prompt}」`;
   }
 
-  // 👇 履歴込みでChatGPTへ送信
+  // ✅ ユーザーごとの履歴初期化
+  if (!chatHistories[userId]) {
+    chatHistories[userId] = [];
+  }
+  const userHistory = chatHistories[userId];
+
   const messages = [
     { role: 'system', content: systemPrompt },
-    ...chatHistory,
+    ...userHistory,
     { role: 'user', content: userPrompt }
   ];
 
@@ -112,18 +119,18 @@ client.on('messageCreate', async message => {
     const assistantReply = chatCompletion.choices[0].message.content;
     await message.reply(assistantReply);
 
-    // 👇 履歴に追加
-    chatHistory.push({ role: 'user', content: userPrompt });
-    chatHistory.push({ role: 'assistant', content: assistantReply });
+    // 履歴保存
+    userHistory.push({ role: 'user', content: userPrompt });
+    userHistory.push({ role: 'assistant', content: assistantReply });
 
-    // 👇 履歴が多すぎたら削除
-    if (chatHistory.length > MAX_HISTORY * 2) {
-      chatHistory.splice(0, chatHistory.length - MAX_HISTORY * 2);
+    // 履歴が長すぎたら切り詰め
+    if (userHistory.length > MAX_HISTORY * 2) {
+      userHistory.splice(0, userHistory.length - MAX_HISTORY * 2);
     }
 
   } catch (error) {
-    console.error('ChatGPTエラー:', error);
-    return message.reply('応答中にエラーが発生しました。しばらくしてから再度お試しください。');
+    console.error('ChatGPT応答エラー:', error);
+    return message.reply('応答に失敗しました。もう一度試してみてください。');
   }
 });
 
