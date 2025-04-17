@@ -19,11 +19,11 @@ const chatHistories = {}; // 🔁 ユーザーごとの会話履歴
 const MAX_HISTORY = 20;
 
 client.once('ready', () => {
-  console.log(🟢 テラ起動完了！Logged in as ${client.user.tag});
+  console.log(`🟢 テラ起動完了！Logged in as ${client.user.tag}`);
 });
 
 client.on('messageCreate', async message => {
-  console.log([DEBUG] メッセージ受信: ${message.content});
+  console.log(`[DEBUG] メッセージ受信: ${message.content}`);
 
   if (message.author.bot) return;
 
@@ -33,24 +33,17 @@ client.on('messageCreate', async message => {
     const imageUrl = attachment.url;
 
     try {
-    // Discordから画像を取得してBase64に変換してから送る
-const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
-const base64Image = Buffer.from(response.data).toString('base64');
-const mimeType = attachment.contentType || 'image/jpeg';
-
-    // Discordの画像URLは一時的なので、Base64ではなく、URLそのまま渡してみる（※一部制限あるが回避可能）
-
-      const chatCompletion = await openai.chat.completions.create({
-        model: 'gpt-4-vision-preview', // ←画像認識にはこのモデルが必須！
-        messages: [
-          {
-            role: 'user',
-            content: [
-              { type: 'text', text: 'この画像に写っているものを説明して' },
-              {
-                type: 'image_url',
-                image_url: {
-                  url: data:${mimeType};base64,${base64Image}
+    const chatCompletion = await openai.chat.completions.create({
+      model: 'gpt-4-vision-preview',
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: 'この画像に写っているものを説明して' },
+            {
+              type: 'image_url',
+              image_url: {
+                url: imageUrl // ✅ Discordの画像URLをそのまま渡す
                 }
               }
             ]
@@ -78,7 +71,7 @@ const mimeType = attachment.contentType || 'image/jpeg';
   let userPrompt = '';
 
   if (userId === SHINCHAN_ID) {
-    systemPrompt = 
+    systemPrompt = `
 あなたの名前はテラです。日本多能工協会の理事長（Discord ID: 791129404960145439）の右腕として設計された秘書型AIです。
 
 重要指示：
@@ -86,17 +79,17 @@ const mimeType = attachment.contentType || 'image/jpeg';
 - 「slothking823」などのユーザー名は使わず、「理事長」という敬称を使うこと。
 - 理事長には敬語・柔らかい口調・丁寧さを心がけてください。
 - 他のユーザーには、元気で業務的な敬語でも大丈夫です。
-;
-    userPrompt = 理事長：「${prompt}」;
+`;
+    userPrompt = `理事長：「${prompt}」`;
   } else {
-    systemPrompt = 
+    systemPrompt = `
 あなたの名前はテラです。日本多能工協会の秘書型AIです。
 「理事長」と呼んでよいのは Discord ID「791129404960145439」のユーザーのみです。
 他のユーザーにはIDではなくユーザー名で親しみやすく対応してください。
 他のユーザーにはフレンドリーな敬語・業務的な口調で対応してください。
 たまにふざけて語尾に「〜だず」を付けてもOKです。
-;
-    userPrompt = ${username}：「${prompt}」;
+`;
+    userPrompt = `${username}：「${prompt}」`;
   }
 
   // ✅ ユーザーごとの履歴初期化
