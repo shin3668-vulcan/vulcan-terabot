@@ -33,11 +33,15 @@ client.on('messageCreate', async message => {
     const imageUrl = attachment.url;
 
     try {
-      const response = await axios.get(imageUrl, {
-        responseType: 'arraybuffer',
-      });
-      const base64Image = Buffer.from(response.data).toString('base64');
-      const mimeType = attachment.contentType || 'image/png';
+    // MIMEタイプの推定（null回避）
+    const mimeType = attachment.contentType ||
+      (attachment.name?.endsWith('.jpg') ? 'image/jpeg' :
+       attachment.name?.endsWith('.jpeg') ? 'image/jpeg' :
+       attachment.name?.endsWith('.png') ? 'image/png' :
+       attachment.name?.endsWith('.webp') ? 'image/webp' :
+       'image/png');
+
+    // Discordの画像URLは一時的なので、Base64ではなく、URLそのまま渡してみる（※一部制限あるが回避可能）
 
       const chatCompletion = await openai.chat.completions.create({
         model: 'gpt-4-vision-preview', // ←画像認識にはこのモデルが必須！
