@@ -23,44 +23,27 @@ client.once('ready', () => {
 });
 
 client.on('messageCreate', async message => {
+  console.log(`[DEBUG] メッセージ受信: ${message.content}`);
+
   if (message.author.bot) return;
 
-  const hasImage = message.attachments.size > 0;
-  const isCommand = message.content.startsWith('/テラ');
+  // ✅ 画像認識処理（テキストなしで画像のみアップ）
+  if (message.attachments.size > 0 && !message.content.startsWith('/テラ')) {
+    const attachment = message.attachments.first();
+    const imageUrl = attachment.url;
 
-  // ✅ 優先1：画像処理（画像が添付されてたら問答無用でこちら優先）
-  if (hasImage && !isCommand) {
-    return await handleImageMessage(message);
-  }
-
-  // ✅ 優先2：テキストコマンド（/テラ のときのみ）
-  if (isCommand) {
-    return await handleTextCommand(message);
-  }
-});
-
-async function handleImageMessage(message) {
-  const attachment = message.attachments.first();
-  const imageUrl = attachment.url;
-
-  try {
-const response = await axios.get(imageUrl, {
-responseType: 'arraybuffer',
-});
-const base64Image = Buffer.from(response.data).toString('base64');
-const mimeType = attachment.contentType || 'image/png';
-
-const chatCompletion = await openai.chat.completions.create({
-  model: 'gpt-4-turbo', 
-  messages: [
-    {
-      role: 'user',
-      content: [
-        { type: 'text', text: 'この画像に写っているものを説明して' },
+    try {
+    const chatCompletion = await openai.chat.completions.create({
+      model: 'gpt-4-vision-preview',
+      messages: [
         {
-          type: 'image_url',
-          image_url: {
-            url: data:${mimeType};base64,${base64Image}
+          role: 'user',
+          content: [
+            { type: 'text', text: 'この画像に写っているものを説明して' },
+            {
+              type: 'image_url',
+              image_url: {
+                url: imageUrl // ✅ Discordの画像URLをそのまま渡す
                 }
               }
             ]
