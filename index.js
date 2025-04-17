@@ -44,7 +44,7 @@ client.on('messageCreate', async message => {
     // Discordの画像URLは一時的なので、Base64ではなく、URLそのまま渡してみる（※一部制限あるが回避可能）
 
       const chatCompletion = await openai.chat.completions.create({
-        model: 'gpt-4-vision-preview', // ←画像認識にはこのモデルが必須！
+        model: 'gpt-4-turbo', // ←画像認識にはこのモデルが必須！
         messages: [
           {
             role: 'user',
